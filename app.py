@@ -3,7 +3,6 @@ import datetime
 import pandas as pd
 import os
 import json
-import plotly.express as px
 
 st.set_page_config(page_title="🚀 Growth Mindset Goal Tracker", layout="wide")
 
@@ -87,19 +86,6 @@ def main():
                 
                 if st.button(f"🗑️ Remove {idx+1}", key=f"remove_{idx}"):
                     remove_goal(idx)
-
-
-                    st.markdown("### 📊 Goal Progress Analytics")
-        progress_df = pd.DataFrame(st.session_state.goals)
-        
-        if not progress_df.empty:
-            fig = px.bar(
-                progress_df, x="goal", y="progress", color="priority",
-                title="Goal Completion Progress", labels={"progress": "Completion (%)"},
-                height=400, text_auto=True
-            )
-            fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
-            st.plotly_chart(fig, use_container_width=True)
     
     st.markdown("### 🎉 Celebrate Your Wins!")
     achievement = st.text_area("What did you accomplish this week?")
