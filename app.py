@@ -1,99 +1,114 @@
 import streamlit as st
 import datetime
 import pandas as pd
-import random
+import os
+import json
+import plotly.express as px
+
+st.set_page_config(page_title="🚀 Growth Mindset Goal Tracker", layout="wide")
+
+GOALS_FILE = "goals.csv"
+
+def load_goals():
+    if os.path.exists(GOALS_FILE):
+        try:
+            df = pd.read_csv(GOALS_FILE)
+            df["steps"] = df["steps"].apply(lambda x: json.loads(x) if isinstance(x, str) else [])
+            return df.to_dict('records')
+        except Exception as e:
+            st.error(f"Error loading goals: {e}")
+            return []
+    return []
+
+def save_goals(goals):
+    df = pd.DataFrame(goals)
+    if "steps" in df:
+        df["steps"] = df["steps"].apply(json.dumps)  # Store steps as JSON string
+    df.to_csv(GOALS_FILE, index=False)
+
+def remove_goal(index):
+    if 0 <= index < len(st.session_state.goals):
+        del st.session_state.goals[index]
+        save_goals(st.session_state.goals)
+        st.rerun()
 
 def main():
-    st.set_page_config(page_title="Growth Mindset Goal Tracker", layout="wide")
+    st.markdown("<h1 style='text-align: center; color: #007BFF;'>🎯 Growth Mindset Goal Tracker</h1>", unsafe_allow_html=True)
+
+    if "goals" not in st.session_state:
+        st.session_state.goals = load_goals()
     
-    # Page Styling
-    st.markdown("""
-    <style>
-    .stApp { background: linear-gradient(to right, rgb(40, 11, 95), rgb(54, 66, 62)); color: white; }
-    .stTextInput, .stTextArea, .stDateInput, .stSelectbox, .stSlider { 
-        background-color: white !important; 
-        color: black !important; 
-    }
-    .stButton > button { 
-        background-color: #4CAF50 !important; 
-        color: white !important; 
-        border-radius: 5px; 
-        padding: 10px; 
-        border: none; 
-    }
-    .stButton > button:hover { background-color: #45a049 !important; }
-    .motivational-quote { color: #FFD700; font-weight: bold; } /* Change the color here */
-    </style>
-    """, unsafe_allow_html=True)
-    
-    st.title("🎯 Growth Mindset Goal Tracker")
-    st.subheader("Set, track, and achieve your goals with a growth mindset!")
-    
-    # Motivational Quotes
-    quotes = [
-        "Success is not final, failure is not fatal: it is the courage to continue that counts.",
-        "Believe you can, and you're halfway there.",
-        "Growth and comfort do not coexist.",
-        "Difficulties strengthen the mind, as labor does the body.",
-        "Do not be embarrassed by your failures, learn from them and start again."
-    ]
-    # Display the motivational quote in the main area
-    st.markdown(f'<p class="motivational-quote">💡 **Motivation:** {random.choice(quotes)}</p>', unsafe_allow_html=True)
-    
-    # Goal Input Section
     st.markdown("### ✏️ Set Your Goal")
-    goal = st.text_input("🌟 Your Main Goal:")
-    steps = st.text_area("📝 Action Steps (Break it into small tasks):")
-    deadline = st.date_input("📅 Set a Deadline:", datetime.date.today())
-    priority = st.selectbox("🚀 Priority Level:", ["Low", "Medium", "High"])
+    col1, col2 = st.columns(2)
+
+    with col1:
+        goal = st.text_input("🌟 Your Main Goal:")
+        deadline = st.date_input("📅 Set a Deadline:", datetime.date.today())
+
+    with col2:
+        priority = st.selectbox("🚀 Priority Level:", ["Low", "Medium", "High"])
+        steps = st.text_area("📝 Action Steps (Separate by new line)").split("\n")
     
-    # Progress Tracking
+    steps = [step.strip() for step in steps if step.strip()]
     progress = st.slider("📊 Track Your Progress:", 0, 100, 0)
     st.progress(progress / 100)
-    
-    if "goals" not in st.session_state:
-        st.session_state.goals = []
-    
-    if st.button("Save Goal"):
+
+    if st.button("💾 Save Goal"):
         if goal and steps:
-            st.session_state.goals.append({"goal": goal, "steps": steps, "deadline": deadline, "priority": priority, "progress": progress})
-            st.success(f"Your goal has been saved! Keep going: **{goal}**")
+            st.session_state.goals.append({
+                "goal": goal,
+                "steps": steps,
+                "deadline": str(deadline),
+                "priority": priority,
+                "progress": progress
+            })
+            save_goals(st.session_state.goals)
+            st.success(f"✅ Your goal has been saved! Keep going: **{goal}**")
         else:
-            st.warning("Please enter a goal and action steps before saving.")
-    
-    # Display Saved Goals
+            st.warning("⚠️ Please enter a goal and action steps before saving.")
+
     if st.session_state.goals:
         st.markdown("### 📌 Saved Goals")
         df = pd.DataFrame(st.session_state.goals)
-        st.table(df)
+        if "steps" in df:
+            df["steps"] = df["steps"].apply(lambda x: " | ".join(x) if isinstance(x, list) else x)
+        st.dataframe(df, height=min(500, 50 * (len(df) + 1)), width=1000)
+
+        if st.session_state.goals:
+            st.markdown("### 📌 Saved Goals")
+            for idx, goal in enumerate(st.session_state.goals):
+                st.markdown(f"""
+                <div style="border: 1px solid #ddd; padding: 10px; border-radius: 10px; margin-bottom: 10px;">
+                    <h4>🎯 {goal['goal']}</h4>
+                    <p>📅 Deadline: <b>{goal['deadline']}</b> | 🚀 Priority: <b>{goal['priority']}</b></p>
+                    <progress value="{goal['progress']}" max="100" style="width:100%; height: 20px;"></progress>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                if st.button(f"🗑️ Remove {idx+1}", key=f"remove_{idx}"):
+                    remove_goal(idx)
+
+
+                    st.markdown("### 📊 Goal Progress Analytics")
+        progress_df = pd.DataFrame(st.session_state.goals)
+        
+        if not progress_df.empty:
+            fig = px.bar(
+                progress_df, x="goal", y="progress", color="priority",
+                title="Goal Completion Progress", labels={"progress": "Completion (%)"},
+                height=400, text_auto=True
+            )
+            fig.update_traces(textfont_size=12, textangle=0, textposition="outside", cliponaxis=False)
+            st.plotly_chart(fig, use_container_width=True)
     
-    # Progress Updates Section
-    st.markdown("### 📢 Share Your Progress")
-    progress_update = st.text_area("How are you progressing?")
-    obstacles = st.text_area("⚠️ Any Challenges?")
-    next_steps = st.text_area("🔄 Next Steps:")
-    
-    if st.button("Submit Progress"):
-        if progress_update or obstacles or next_steps:
-            st.success("Great job! Keep pushing forward! 🚀")
-            if progress_update:
-                st.write(f"✅ Progress: {progress_update}")
-            if obstacles:
-                st.write(f"⚠️ Challenges: {obstacles}")
-            if next_steps:
-                st.write(f"🔄 Next Steps: {next_steps}")
-        else:
-            st.warning("Please enter some updates before submitting.")
-    
-    # Celebrate Achievements
     st.markdown("### 🎉 Celebrate Your Wins!")
     achievement = st.text_area("What did you accomplish this week?")
-    if st.button("Celebrate!"):
+    if st.button("🎊 Celebrate!"):
         if achievement:
             st.balloons()
-            st.success(f"🎊 Amazing! You accomplished: {achievement} 🎉")
+            st.success(f"🎉 Amazing! You accomplished: {achievement} 🎉")
         else:
-            st.warning("Please enter at least one achievement.")
-    
+            st.warning("⚠️ Please enter at least one achievement.")
+
 if __name__ == "__main__":
     main()
