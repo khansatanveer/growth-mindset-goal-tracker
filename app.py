@@ -38,15 +38,11 @@ def main():
         st.session_state.goals = load_goals()
     
     st.markdown("### ✏️ Set Your Goal")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        goal = st.text_input("🌟 Your Main Goal:")
-        deadline = st.date_input("📅 Set a Deadline:", datetime.date.today())
-
-    with col2:
-        priority = st.selectbox("🚀 Priority Level:", ["Low", "Medium", "High"])
-        steps = st.text_area("📝 Action Steps (Separate by new line)").split("\n")
+    
+    goal = st.text_input("🌟 Your Main Goal:")
+    deadline = st.date_input("📅 Set a Deadline:", datetime.date.today())
+    priority = st.selectbox("🚀 Priority Level:", ["Low", "Medium", "High"])
+    steps = st.text_area("📝 Action Steps (Separate by new line)").split("\n")
     
     steps = [step.strip() for step in steps if step.strip()]
     progress = st.slider("📊 Track Your Progress:", 0, 100, 0)
@@ -87,6 +83,7 @@ def main():
                 
                 if st.button(f"🗑️ Remove {idx+1}", key=f"remove_{idx}"):
                     remove_goal(idx)
+
 
 if __name__ == "__main__":
     main()
