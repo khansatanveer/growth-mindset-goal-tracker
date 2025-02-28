@@ -62,6 +62,7 @@ def main():
                 "progress": progress
             })
             save_goals(st.session_state.goals)
+            st.balloons()
             st.success(f"✅ Your goal has been saved! Keep going: **{goal}**")
         else:
             st.warning("⚠️ Please enter a goal and action steps before saving.")
