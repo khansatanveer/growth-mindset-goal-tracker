@@ -87,15 +87,6 @@ def main():
                 
                 if st.button(f"🗑️ Remove {idx+1}", key=f"remove_{idx}"):
                     remove_goal(idx)
-    
-    st.markdown("### 🎉 Celebrate Your Wins!")
-    achievement = st.text_area("What did you accomplish this week?")
-    if st.button("🎊 Celebrate!"):
-        if achievement:
-            st.balloons()
-            st.success(f"🎉 Amazing! You accomplished: {achievement} 🎉")
-        else:
-            st.warning("⚠️ Please enter at least one achievement.")
 
 if __name__ == "__main__":
     main()
